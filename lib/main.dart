@@ -47,8 +47,46 @@ class _TodoListState extends State<TodoList> {
 
   void _deleteTodo(Todo todo) {
     setState(() {
-      _todos.removeWhere((element) => element.name == todo.name);
+      _todos.remove(todo);
     });
+  }
+
+  void _updateTodo(Todo todo) {
+    _textFieldController.text = todo.name; // Pré-remplir le champ
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Modifier la tâche'),
+          content: TextField(
+            controller: _textFieldController,
+            decoration: const InputDecoration(hintText: 'Type your todo'),
+            autofocus: true,
+          ),
+          actions: <Widget>[
+            OutlinedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_textFieldController.text.isNotEmpty) {
+                  setState(() {
+                    todo.name = _textFieldController.text; // Mettre à jour le nom
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Mettre à jour'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -61,9 +99,11 @@ class _TodoListState extends State<TodoList> {
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: _todos.map((Todo todo) {
           return TodoItem(
-              todo: todo,
-              onTodoChanged: _handleTodoChange,
-              removeTodo: _deleteTodo);
+            todo: todo,
+            onTodoChanged: _handleTodoChange,
+            removeTodo: _deleteTodo,
+            updateTodo: _updateTodo, // Passer la fonction de mise à jour
+          );
         }).toList(),
       ),
       floatingActionButton: FloatingActionButton(
@@ -80,7 +120,7 @@ class _TodoListState extends State<TodoList> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Add a todo'),
+          title: const Text('Ajouter une tâche'),
           content: TextField(
             controller: _textFieldController,
             decoration: const InputDecoration(hintText: 'Type your todo'),
@@ -88,27 +128,19 @@ class _TodoListState extends State<TodoList> {
           ),
           actions: <Widget>[
             OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: const Text('Annuler'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
               onPressed: () {
-                Navigator.of(context).pop();
-                _addTodoItem(_textFieldController.text);
+                if (_textFieldController.text.isNotEmpty) {
+                  Navigator.of(context).pop();
+                  _addTodoItem(_textFieldController.text);
+                }
               },
-              child: const Text('Add'),
+              child: const Text('Ajouter'),
             ),
           ],
         );
@@ -124,15 +156,17 @@ class Todo {
 }
 
 class TodoItem extends StatelessWidget {
-  TodoItem(
-      {required this.todo,
-      required this.onTodoChanged,
-      required this.removeTodo})
-      : super(key: ObjectKey(todo));
+  TodoItem({
+    required this.todo,
+    required this.onTodoChanged,
+    required this.removeTodo,
+    required this.updateTodo,
+  }) : super(key: ObjectKey(todo));
 
   final Todo todo;
   final void Function(Todo todo) onTodoChanged;
   final void Function(Todo todo) removeTodo;
+  final void Function(Todo todo) updateTodo;
 
   TextStyle? _getTextStyle(bool checked) {
     if (!checked) return null;
@@ -157,22 +191,33 @@ class TodoItem extends StatelessWidget {
           onTodoChanged(todo);
         },
       ),
-      title: Row(children: <Widget>[
-        Expanded(
-          child: Text(todo.name, style: _getTextStyle(todo.completed)),
-        ),
-        IconButton(
-          iconSize: 30,
-          icon: const Icon(
-            Icons.delete,
-            color: Colors.red,
+      title: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(todo.name, style: _getTextStyle(todo.completed)),
           ),
-          alignment: Alignment.centerRight,
-          onPressed: () {
-            removeTodo(todo);
-          },
-        ),
-      ]),
+          IconButton(
+            iconSize: 30,
+            icon: const Icon(
+              Icons.edit,
+              color: Colors.blue,
+            ),
+            onPressed: () {
+              updateTodo(todo); // Appeler la fonction de mise à jour
+            },
+          ),
+          IconButton(
+            iconSize: 30,
+            icon: const Icon(
+              Icons.delete,
+              color: Colors.red,
+            ),
+            onPressed: () {
+              removeTodo(todo);
+            },
+          ),
+        ],
+      ),
     );
   }
 }
